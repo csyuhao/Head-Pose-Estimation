@@ -1,0 +1,148 @@
+''' Human facial landmark detector based on Convolutional Neural Network '''
+import tensorflow as tf 
+import numpy as np 
+import cv2
+
+class FaceDetector:
+    
+    ''' Detect human face from image '''
+
+    def __init__(self, 
+                dnn_proto_text='assets/deploy.prototxt', 
+                dnn_model='assets/res10_300x300_ssd_iter_140000.caffemodel'):
+        ''' Initialization '''
+        
+        self.face_net = cv2.dnn.readNetFromCaffe(dnn_proto_text, dnn_model)
+        self.detection_result = None
+
+    def get_faceboxes(self, image, threshold=0.5):
+        '''
+            Get the bounding box of faces in image using dnn.
+        '''
+        rows, cols, _ = image.shape
+
+        confidences = []
+        faceboxes = []
+
+        self.face_net.setInput(cv2.dnn.blobFromImage(image, 1.0, (300,300), (104.0, 177.0, 123.0), False, False))
+        '''
+            note:
+                blobFromImage(const std::vector< Mat > & 	images,
+                                double 	scalefactor = 1.0,
+                                Size 	size = Size(),
+                                const Scalar & 	mean = Scalar(),
+                                bool 	swapRB = true,
+                                bool 	crop = false,
+                            )	
+                parameters:
+                    images:         input image (with 1-, 3- or 4-channels).
+                    scalefactor:	multiplier for image values.
+                    size:	        spatial size for output image
+                    mean:	        scalar with mean values which are subtracted from channels. Values are intended to be in (mean-R, mean-G, mean-B) order if image has BGR ordering and swapRB is true.
+                    swapRB:	        flag which indicates that swap first and last channels in 3-channel image is necessary.
+                    crop:   	    flag which indicates whether image will be cropped after resize or not
+        '''
+        detections = self.face_net.forward()
+
+        for result in detections[0,0,:,:]:
+            confidence = result[2]
+            if confidence > threshold:
+                x_left_bottom = int(result[3] * cols)
+                y_left_bottom = int(result[4] * rows)
+                x_right_top = int(result[5] * cols)
+                y_right_top = int(result[6] * rows)
+                confidences.append(confidence)
+                faceboxes.append([x_left_bottom, y_left_bottom, x_right_top, y_right_top])
+        self.detection_result = [faceboxes, confidences]
+        return confidences, faceboxes
+
+class MarkDetector:
+
+    ''' Facial landmark detector by Convolutional Neural Network '''
+
+    def __init__(self, mark_model='assets/forzen_inference_graph.pb'):
+        ''' Intialization '''
+        # a face detector is required for mark detection 
+        self.face_detector = FaceDetector()
+
+        self.cnn_input_size = 128
+        self.marks = None
+
+        # Get a Tensorflow session to ready to do landmark detection
+        # load a (frozen) Tensorflow model to memory.
+        detection_graph = tf.Graph()
+
+        with detection_graph.as_default():
+            od_graph_def = tf.GraphDef()
+            with tf.gfile.GFile(mark_model, 'rb') as fid:
+                serialized_graph = fid.read()
+                od_graph_def.ParseFromString(serialized_graph)
+                tf.import_graph_def(od_graph_def, name='')
+        self.graph = detection_graph
+        self.sess = tf.Session(graph=detection_graph)
+
+    @staticmethod
+    def move_box(box, offset):
+        ''' Move the box to direction speficied by vector offset '''
+        left_x = box[0] + offset[0]
+        top_y = box[1] + offset[1]
+        right_x = box[2] + offset[0]
+        bottom_y = box[3] + offset[1]
+        return [left_x, top_y, right_x, bottom_y]
+
+    @staticmethod
+    def get_square_box(box):
+        ''' Get a square box out of the given box, by expanding it.'''
+        left_x = box[0]
+        top_y = box[1]
+        right_x = box[2]
+        bottom_y = box[3]
+
+        box_width = right_x - left_x
+        box_height = bottom_y - bottom_y
+
+        # check if box is already a square. If not, make it a square. 
+        diff = box_height - box_width
+
+        delta = int(abs(diff) / 2)
+
+        if diff == 0:      # already a square
+            return box
+        elif diff > 0:     # height > width, a slim box
+            left_x -= delta
+            right_x += delta
+            if diff % 2 == 1:
+                right_x += 1
+        else:
+            top_y -= delta
+            bottom_y += delta
+            if diff % 2 == 1:
+                bottom_y =+ 1
+
+        # Make sure box is always square.
+        assert ((right_x - left_x) == (bottom_y - top_y)), "Box is not square."
+        return [left_x, top_y right_x, bottom_y]
+    
+    @staticmethod
+    def box_in_image(box, image):
+        ''' Check if the box is in image. '''
+        rows = image.shape[0]
+        cols = image.shape[1]
+        return box[0] >= 0 and box[1] >= 0 and box[2] <= cols and box[3] <= rows
+
+    def extract_cnn_facebox(self, image):
+        ''' Extract face area from image. '''
+        _, raw_boxes = self.face_detector.get_faceboxes(image=image, threshold=0.9)
+
+        for box in raw_boxes:
+            # Move box down.
+            diff_height_width = (box[3] - box[1]) - (box[2] - box[0])
+            offset_y = int(abs(diff_height_width / 2))
+            box_moved = self.move_box(box, [0, offset_y])
+
+            # Move box square.
+            facebox = self.get_square_box(box_moved)
+
+            if self.box_in_image(facebox, image):
+                return facebox
+        retun None
