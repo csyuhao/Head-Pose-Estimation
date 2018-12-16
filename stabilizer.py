@@ -13,10 +13,33 @@ class Stabilizer:
         ''' Initializetion '''
         # Currently we only support scalar and point, so check usr input first.
         assert state_num == 4 or state_num == 2, "only scalar and point supported, check state_num please."
-
         # store parameters.
         self.state_num = state_num
         self.measure_num = measure_num
 
         # The filter itself.
         self.filter = cv2.KalmanFilter(state_num, measure_num, 0)
+
+        # Store the parameters.
+        self.state = np.zeros((state_num, 1), dtype=np.float32)
+        
+        # Store the measurement result.        
+        self.measurement = np.zeros((measure_num, 1), dtype=np.float32)
+
+        # Store the prediction.
+        self.prediction = np.zeros((state_num, 1), dtype=np.float32)
+
+        # Kalman parameters setup for scalar.
+        if self.measure_num == 1:
+            self.filter.transitionMatrix = np.array([[1, 1], [0, 1]], dtype=np.float32)
+            self.filter.measurementMatrix = np.array([[1, 1]], dtype=np.float32)
+            self.filter.processNoiseCov = np.array([[1, 0],[0, 1]], dtype=np.float32) * cov_process
+            self.filter.measureNoiseCov = np.array([[1]], dtype=np.float32) * cov_measure
+        
+        # Kalman parameters setup for point.
+        if self.measure_num == 2:
+            self.filter.transitionMatrix = np.array([[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.float32)
+            self.filter.measurementMatrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.float32)
+            self.filter.processNoiseCov = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.float32) * cov_process
+            self.filter.measurementNoiseCov = np.array([[1, 0], [0, 1]], dtype=np.float32) * cov_measure
+            

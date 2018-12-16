@@ -10,7 +10,10 @@ class FaceDetector:
     def __init__(self, 
                 dnn_proto_text='assets/deploy.prototxt', 
                 dnn_model='assets/res10_300x300_ssd_iter_140000.caffemodel'):
-        ''' Initialization '''
+        '''
+        Initialization 
+        model: https://github.com/opencv/opencv/blob/master/samples/dnn/face_detector/deploy.prototxt
+        '''
         
         self.face_net = cv2.dnn.readNetFromCaffe(dnn_proto_text, dnn_model)
         self.detection_result = None
@@ -41,6 +44,7 @@ class FaceDetector:
                     mean:	        scalar with mean values which are subtracted from channels. Values are intended to be in (mean-R, mean-G, mean-B) order if image has BGR ordering and swapRB is true.
                     swapRB:	        flag which indicates that swap first and last channels in 3-channel image is necessary.
                     crop:   	    flag which indicates whether image will be cropped after resize or not
+            params from https://github.com/opencv/opencv/tree/master/samples/dnn
         '''
         detections = self.face_net.forward()
 
@@ -120,8 +124,8 @@ class MarkDetector:
                 bottom_y =+ 1
 
         # Make sure box is always square.
-        assert ((right_x - left_x) == (bottom_y - top_y)), "Box is not square."
-        return [left_x, top_y right_x, bottom_y]
+        assert ((right_x - left_x) == (bottom_y - top_y)),'Box is not square.'
+        return [left_x, top_y, right_x, bottom_y]
     
     @staticmethod
     def box_in_image(box, image):
@@ -133,9 +137,12 @@ class MarkDetector:
     def extract_cnn_facebox(self, image):
         ''' Extract face area from image. '''
         _, raw_boxes = self.face_detector.get_faceboxes(image=image, threshold=0.9)
-
+        '''
+        raw_boxes: the location of boxes.
+        '''
         for box in raw_boxes:
             # Move box down.
+            # height: box[3] - box[1] width: box[2] - box[0]
             diff_height_width = (box[3] - box[1]) - (box[2] - box[0])
             offset_y = int(abs(diff_height_width / 2))
             box_moved = self.move_box(box, [0, offset_y])
@@ -145,4 +152,29 @@ class MarkDetector:
 
             if self.box_in_image(facebox, image):
                 return facebox
-        retun None
+        return None
+    
+    def detect_marks(self, image_np):
+        '''detect marks from image'''
+        # get result tensor by its name.
+        logits_tensor = self.graph.get_tensor_by_name("logits/BiasAdd:0")
+
+        # actual detection.
+        predictions = self.sess.run(
+            logits_tensor,
+            feed_dict={"input_image_tensor:0": image_np}
+        )
+
+        # convert predictions to landmarks.
+        marks = np.array(predictions).flatten()
+        marks = np.reshape(marks, (-1, 2))
+        '''
+        note:
+        flatten function:
+            return a copy of the array collapsed into one dimension.
+            default param 'C' means to flatten in row-major order(1 row).
+        reshape function:
+            shape = (-1, 2) : the number of column is 2, row's is undefined.
+            shape = (2, -1) : the number of row is 2, colum's is undefined.
+        '''
+        return marks
