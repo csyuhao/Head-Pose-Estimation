@@ -8,8 +8,8 @@ class FaceDetector:
     ''' Detect human face from image '''
 
     def __init__(self, 
-                dnn_proto_text='assets/deploy.prototxt', 
-                dnn_model='assets/res10_300x300_ssd_iter_140000.caffemodel'):
+                dnn_proto_text=r'assets/deploy.prototxt', 
+                dnn_model=r'assets/res10_300x300_ssd_iter_140000.caffemodel'):
         '''
         Initialization 
         model: https://github.com/opencv/opencv/blob/master/samples/dnn/face_detector/deploy.prototxt
@@ -64,7 +64,7 @@ class MarkDetector:
 
     ''' Facial landmark detector by Convolutional Neural Network '''
 
-    def __init__(self, mark_model='assets/forzen_inference_graph.pb'):
+    def __init__(self, mark_model=r'assets/frozen_inference_graph.pb'):
         ''' Intialization '''
         # a face detector is required for mark detection 
         self.face_detector = FaceDetector()
@@ -103,7 +103,7 @@ class MarkDetector:
         bottom_y = box[3]
 
         box_width = right_x - left_x
-        box_height = bottom_y - bottom_y
+        box_height = bottom_y - top_y
 
         # check if box is already a square. If not, make it a square. 
         diff = box_height - box_width
@@ -124,6 +124,7 @@ class MarkDetector:
                 bottom_y =+ 1
 
         # Make sure box is always square.
+        # print("%d ---- %d ---- %d ---- %d" %(right_x, left_x, bottom_y, top_y))
         assert ((right_x - left_x) == (bottom_y - top_y)),'Box is not square.'
         return [left_x, top_y, right_x, bottom_y]
     
@@ -138,17 +139,18 @@ class MarkDetector:
         ''' Extract face area from image. '''
         _, raw_boxes = self.face_detector.get_faceboxes(image=image, threshold=0.9)
         '''
-        raw_boxes: the location of boxes.
+            raw_boxes: the location of boxes.
         '''
+
         for box in raw_boxes:
             # Move box down.
             # height: box[3] - box[1] width: box[2] - box[0]
-            diff_height_width = (box[3] - box[1]) - (box[2] - box[0])
-            offset_y = int(abs(diff_height_width / 2))
-            box_moved = self.move_box(box, [0, offset_y])
+            # diff_height_width = (box[3] - box[1]) - (box[2] - box[0])
+            # offset_y = int(abs(diff_height_width / 2))
+            # box_moved = self.move_box(box, [0, offset_y])
 
             # Move box square.
-            facebox = self.get_square_box(box_moved)
+            facebox = self.get_square_box(box)
 
             if self.box_in_image(facebox, image):
                 return facebox
@@ -178,3 +180,10 @@ class MarkDetector:
             shape = (2, -1) : the number of row is 2, colum's is undefined.
         '''
         return marks
+    
+    @staticmethod
+    def draw_marks(image, marks, color=(255, 255, 255)):
+        """Draw mark points on image"""
+        for mark in marks:
+            cv2.circle(image, (int(mark[0]), int(
+                mark[1])), 1, color, -1, cv2.LINE_AA)

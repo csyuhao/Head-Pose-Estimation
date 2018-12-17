@@ -36,7 +36,7 @@ class PoseEstimator:
         self.r_vec = np.array([[0.01891013],[0.08560084],[-3.14392813]])
         self.t_vec = np.array([[-14.97821226], [-10.62040383],[-2053.03596872]])
         '''
-        the datail imformation listed in https://www.cnblogs.com/Jessica-jie/p/6596450.html
+        the detail imformation listed in https://www.cnblogs.com/Jessica-jie/p/6596450.html
         '''
 
     def _get_full_model_points(self, filename='assets/model.txt'):
@@ -68,7 +68,17 @@ class PoseEstimator:
             self.model_points_68, image_points, self.camera_matrix, self.dist_coeefs,
             rvec=self.r_vec, tvec=self.t_vec, useExtrinsicGuess=True
         )
-        
+        '''
+        bool solvePnP(InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess = false,int flags = SOLVEPNP_ITERATIVE)
+        params:
+            objectPoints:   object points array in world coordinate space.
+            imagePoints:    the points in image.
+            cameraMatrix:   the camera matrix.
+            distCoeffs:     distortion coefficient of 4, 5, 8 or 12 elements.
+            rvec:           Output rotation vector (see  Rodrigues() ) that, together with  tvec , brings points from the model coordinate system to the camera coordinate system.
+            tvec:           Output translation vector.
+            useExtrinsicGuess:  If true (1), the function uses the provided  rvec and  tvec values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
+        '''
         return (rotation_vector, translation_vector)
 
     def draw_annotion_box(self, image, rotation_vector, translation_vector, color = (255,255,255), line_width = 2):

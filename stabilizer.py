@@ -1,5 +1,7 @@
 '''
-    using Kalman Filter as a point stabilizer to stabilize a 2D point
+using Kalman Filter as a point stabilizer to stabilize a 2D point
+图像滤波：
+    在尽量保留图像细节特征的条件下对目标图像的噪声进行抑制。
 '''
 
 import numpy as np 
@@ -34,7 +36,7 @@ class Stabilizer:
             self.filter.transitionMatrix = np.array([[1, 1], [0, 1]], dtype=np.float32)
             self.filter.measurementMatrix = np.array([[1, 1]], dtype=np.float32)
             self.filter.processNoiseCov = np.array([[1, 0],[0, 1]], dtype=np.float32) * cov_process
-            self.filter.measureNoiseCov = np.array([[1]], dtype=np.float32) * cov_measure
+            self.filter.measurementNoiseCov = np.array([[1]], dtype=np.float32) * cov_measure
         
         # Kalman parameters setup for point.
         if self.measure_num == 2:
@@ -42,4 +44,20 @@ class Stabilizer:
             self.filter.measurementMatrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.float32)
             self.filter.processNoiseCov = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.float32) * cov_process
             self.filter.measurementNoiseCov = np.array([[1, 0], [0, 1]], dtype=np.float32) * cov_measure
-            
+    
+    def update(self, measurement):
+        '''update the filter'''
+        # make kalman prediction
+        self.prediction = self.filter.predict()
+
+        # get new measurement
+        if self.measure_num == 1:
+            self.measurement = np.array([[np.float32(measurement[0])]])
+        else:
+            self.measurement = np.array([[np.float32(measurement[0])], [np.float32(measurement[1])]])
+        
+        # correct according to measurement
+        self.filter.correct(self.measurement)
+
+        # update state value.
+        self.state = self.filter.statePost

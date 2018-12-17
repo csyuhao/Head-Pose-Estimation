@@ -20,12 +20,15 @@ from pose_estimator import PoseEstimator
 
 CNN_INPUT_SIZE = 128
 
-def get_face(detector, img_queue, box_queue):
+def get_face( img_queue, box_queue):
     '''Get face from image queue. this function is used for multiprocessing. '''
-
+    
+    # introduce mark_detector to detect landmarks
+    mark_detector = MarkDetector()
+    
     while True:
         image = img_queue.get()
-        box = detector.extract_cnn_facebox(image)
+        box = mark_detector.extract_cnn_facebox(image)
         '''
         the box of face.
         '''
@@ -40,17 +43,16 @@ def main():
     cam = cv2.VideoCapture(video_src)
     _, sample_frame = cam.read()
 
-    # introduce mark_detector to detect landmarks
-    mark_detector = MarkDetector()
-
     # setup process and queues for multiprocessing.
     img_queue = Queue()
     box_queue = Queue()
     img_queue.put(sample_frame)
-    box_process = Process(target=get_face, args=(mark_detector, img_queue, box_queue))
-
+    box_process = Process(target=get_face, args=(img_queue, box_queue))
     box_process.start()
 
+    # introduce mark_detector to detect landmarks
+    mark_detector = MarkDetector()
+    
     # introduce pos estimator to solve pose. Get one frames to setup the
     # estimator according to the images size.
     height, width = sample_frame.shape[:2]
@@ -110,7 +112,7 @@ def main():
                 marks[:, 1] += facebox[1]
 
                 # uncomment following line to show raw marks.
-                # mark_detector.draw_marks(frame, marks, color=(0, 255, 0))
+                mark_detector.draw_marks(frame, marks, color=(0, 255, 0))
 
                 # try pose estimation with 68 points.
                 pose = pose_estimator.solve_pose_by_68_points(marks)
@@ -127,11 +129,13 @@ def main():
                 '''
                 stabile_pose = np.reshape(stabile_pose, (-1, 3))
 
-                # uncomment following line to draw pose annotaion on frame.
-                # pose_estimator.draw_annotation_box(frame, pose[0], pose[1], color=(255, 128, 128))
+                print(stabile_pose)
 
                 # uncomment following line to draw stabile pose annotation on frame.
-                pose_estimator.draw_annotion_box(frame, stabile_pose[0], stabile_pose[1], color=(128, 255, 128))
+                # pose_estimator.draw_annotion_box(frame, stabile_pose[0], stabile_pose[1], color=(128, 255, 128))
+
+                
+
         # show preview
         cv2.imshow("Preview", frame)
         if cv2.waitKey(10) == 27:
