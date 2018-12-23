@@ -80,34 +80,3 @@ class PoseEstimator:
             useExtrinsicGuess:  If true (1), the function uses the provided  rvec and  tvec values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
         '''
         return (rotation_vector, translation_vector)
-
-    def draw_annotion_box(self, image, rotation_vector, translation_vector, color = (255,255,255), line_width = 2):
-        '''Draw a 3D box as annoation of pose'''
-
-        point_3d = []
-        rear_size = 75
-        rear_depth = 0
-        point_3d.append((-rear_size, -rear_size, rear_depth))
-        point_3d.append((-rear_size, rear_size, rear_depth))
-        point_3d.append((rear_size, rear_size, rear_depth))
-        point_3d.append((rear_size, -rear_size, rear_depth))
-        point_3d.append((-rear_size, -rear_size, rear_depth))
-
-        front_size = 100
-        front_depth = 100
-        point_3d.append((-front_size, -front_size, front_depth))
-        point_3d.append((-front_size, front_size, front_depth))
-        point_3d.append((front_size, front_size, front_depth))
-        point_3d.append((front_size, -front_size, front_depth))
-        point_3d.append((-front_size, -front_size, front_depth))
-        point_3d = np.array(point_3d, dtype=np.float).reshape(-1, 3)
-
-        # map to 2d image points.
-        (point_2d, _) = cv2.projectPoints(point_3d, rotation_vector, translation_vector, self.camera_matrix,self.dist_coeefs)
-        point_2d = np.int32(point_2d.reshape(-1, 2))
-
-        # Draw all the lines
-        cv2.polylines(image, [point_2d], True, color, line_width, cv2.LINE_AA)
-        cv2.line(image, tuple(point_2d[1]), tuple(point_2d[6]), color, line_width, cv2.LINE_AA)
-        cv2.line(image, tuple(point_2d[2]), tuple(point_2d[7]), color, line_width, cv2.LINE_AA)
-        cv2.line(image, tuple(point_2d[3]), tuple(point_2d[8]), color, line_width, cv2.LINE_AA)

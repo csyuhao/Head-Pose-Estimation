@@ -133,13 +133,14 @@ def main():
                 '''
                 stabile_pose = np.reshape(stabile_pose, (-1, 3))
 
-                print(stabile_pose)
+                # print(stabile_pose)
 
                 # uncomment following line to draw stabile pose annotation on frame.
-                # pose_estimator.draw_annotion_box(frame, stabile_pose[0], stabile_pose[1], color=(128, 255, 128))
+                # util.draw_annotion_box(frame, stabile_pose[0], stabile_pose[1], color=(128, 255, 128))
 
-
-
+                # stabile_pose[0] is rotation_vector, and stabile_pose[1] is translation_vector
+                angle = util.get_angle(stabile_pose[0])
+                print(angle)
         # show preview
         cv2.imshow("Preview", frame)
         if cv2.waitKey(10) == 27:

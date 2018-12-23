@@ -1,6 +1,8 @@
 '''some functions for debug and some utility functions'''
 
 import cv2
+import math
+import numpy as np
 
 def move_box(box, offset):
     ''' Move the box to direction speficied by vector offset '''
@@ -64,3 +66,53 @@ def draw_marks(image, marks, color=(255, 255, 255)):
     for mark in marks:
         cv2.circle(image, (int(mark[0]), int(mark[1])), 1, color, -1, cv2.LINE_AA)
 
+
+def draw_annotion_box(image, rotation_vector, translation_vector, color = (255,255,255), line_width = 2):
+    '''Draw a 3D box as annoation of pose'''
+
+    point_3d = []
+    rear_size = 75
+    rear_depth = 0
+    point_3d.append((-rear_size, -rear_size, rear_depth))
+    point_3d.append((-rear_size, rear_size, rear_depth))
+    point_3d.append((rear_size, rear_size, rear_depth))
+    point_3d.append((rear_size, -rear_size, rear_depth))
+    point_3d.append((-rear_size, -rear_size, rear_depth))
+
+    front_size = 100
+    front_depth = 100
+    point_3d.append((-front_size, -front_size, front_depth))
+    point_3d.append((-front_size, front_size, front_depth))
+    point_3d.append((front_size, front_size, front_depth))
+    point_3d.append((front_size, -front_size, front_depth))
+    point_3d.append((-front_size, -front_size, front_depth))
+    point_3d = np.array(point_3d, dtype=np.float).reshape(-1, 3)
+
+    # map to 2d image points.
+    (point_2d, _) = cv2.projectPoints(point_3d, rotation_vector, translation_vector, self.camera_matrix,self.dist_coeefs)
+    point_2d = np.int32(point_2d.reshape(-1, 2))
+
+    # Draw all the lines
+    cv2.polylines(image, [point_2d], True, color, line_width, cv2.LINE_AA)
+    cv2.line(image, tuple(point_2d[1]), tuple(point_2d[6]), color, line_width, cv2.LINE_AA)
+    cv2.line(image, tuple(point_2d[2]), tuple(point_2d[7]), color, line_width, cv2.LINE_AA)
+    cv2.line(image, tuple(point_2d[3]), tuple(point_2d[8]), color, line_width, cv2.LINE_AA)
+
+def get_angle(rotation_vector):
+    '''convert the rotation vectors into angle'''
+
+    rotation_matrix = np.zeros((3,3), dtype=np.float32)
+    cv2.Rodrigues(rotation_vector, rotation_matrix)
+
+    sy = np.sqrt(rotation_matrix[0,0] * rotation_matrix[0,0] + rotation_matrix[1,0] * rotation_matrix[1,0])
+
+    if sy < 1e-6:
+        x = math.atan2(rotation_matrix[1,2], rotation_matrix[1, 1])
+        y = math.atan2(rotation_matrix[2,0], sy)
+        z = 0
+    else:
+        x = math.atan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
+        y = math.atan2(-rotation_matrix[2, 0], sy)
+        z = math.atan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
+    
+    return [x, y, z]
