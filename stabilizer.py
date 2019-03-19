@@ -4,7 +4,7 @@ using Kalman Filter as a point stabilizer to stabilize a 2D point
     在尽量保留图像细节特征的条件下对目标图像的噪声进行抑制。
 '''
 
-import numpy as np 
+import numpy as np
 import cv2
 
 
@@ -24,8 +24,8 @@ class Stabilizer:
 
         # Store the parameters.
         self.state = np.zeros((state_num, 1), dtype=np.float32)
-        
-        # Store the measurement result.        
+
+        # Store the measurement result.
         self.measurement = np.zeros((measure_num, 1), dtype=np.float32)
 
         # Store the prediction.
@@ -35,16 +35,16 @@ class Stabilizer:
         if self.measure_num == 1:
             self.filter.transitionMatrix = np.array([[1, 1], [0, 1]], dtype=np.float32)
             self.filter.measurementMatrix = np.array([[1, 1]], dtype=np.float32)
-            self.filter.processNoiseCov = np.array([[1, 0],[0, 1]], dtype=np.float32) * cov_process
+            self.filter.processNoiseCov = np.array([[1, 0], [0, 1]], dtype=np.float32) * cov_process
             self.filter.measurementNoiseCov = np.array([[1]], dtype=np.float32) * cov_measure
-        
+
         # Kalman parameters setup for point.
         if self.measure_num == 2:
             self.filter.transitionMatrix = np.array([[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.float32)
             self.filter.measurementMatrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.float32)
             self.filter.processNoiseCov = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.float32) * cov_process
             self.filter.measurementNoiseCov = np.array([[1, 0], [0, 1]], dtype=np.float32) * cov_measure
-    
+
     def update(self, measurement):
         '''update the filter'''
         # make kalman prediction
@@ -55,7 +55,7 @@ class Stabilizer:
             self.measurement = np.array([[np.float32(measurement[0])]])
         else:
             self.measurement = np.array([[np.float32(measurement[0])], [np.float32(measurement[1])]])
-        
+
         # correct according to measurement
         self.filter.correct(self.measurement)
 

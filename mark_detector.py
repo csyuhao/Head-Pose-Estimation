@@ -1,21 +1,24 @@
 ''' Human facial landmark detector based on Convolutional Neural Network '''
-import tensorflow as tf 
-import numpy as np 
+import tensorflow as tf
+import numpy as np
 import cv2
 import util
 
+
 class FaceDetector:
-    
+
     ''' Detect human face from image '''
 
-    def __init__(self, 
-                dnn_proto_text=r'assets/deploy.prototxt', 
-                dnn_model=r'assets/res10_300x300_ssd_iter_140000.caffemodel'):
+    def __init__(
+            self,
+            dnn_proto_text=r'assets/deploy.prototxt',
+            dnn_model=r'assets/res10_300x300_ssd_iter_140000.caffemodel',
+            ):
         '''
-        Initialization 
+        Initialization
         model: https://github.com/opencv/opencv/blob/master/samples/dnn/face_detector/deploy.prototxt
         '''
-        
+
         self.face_net = cv2.dnn.readNetFromCaffe(dnn_proto_text, dnn_model)
         self.detection_result = None
 
@@ -28,7 +31,7 @@ class FaceDetector:
         confidences = []
         faceboxes = []
 
-        self.face_net.setInput(cv2.dnn.blobFromImage(image, 1.0, (300,300), (104.0, 177.0, 123.0), False, False))
+        self.face_net.setInput(cv2.dnn.blobFromImage(image, 1.0, (300, 300), (104.0, 177.0, 123.0), False, False))
         '''
             note:
                 blobFromImage(const std::vector< Mat > & 	images,
@@ -37,7 +40,7 @@ class FaceDetector:
                                 const Scalar & 	mean = Scalar(),
                                 bool 	swapRB = true,
                                 bool 	crop = false,
-                            )	
+                            )
                 parameters:
                     images:         input image (with 1-, 3- or 4-channels).
                     scalefactor:	multiplier for image values.
@@ -49,7 +52,7 @@ class FaceDetector:
         '''
         detections = self.face_net.forward()
 
-        for result in detections[0,0,:,:]:
+        for result in detections[0, 0, :, :]:
             confidence = result[2]
             if confidence > threshold:
                 x_left_bottom = int(result[3] * cols)
@@ -58,9 +61,10 @@ class FaceDetector:
                 y_right_top = int(result[6] * rows)
                 confidences.append(confidence)
                 faceboxes.append([x_left_bottom, y_left_bottom, x_right_top, y_right_top])
-        
+
         self.detection_result = [faceboxes, confidences]
         return confidences, faceboxes
+
 
 class MarkDetector:
 
@@ -68,7 +72,7 @@ class MarkDetector:
 
     def __init__(self, mark_model=r'assets/frozen_inference_graph.pb'):
         ''' Intialization '''
-        # a face detector is required for mark detection 
+        # a face detector is required for mark detection
         self.face_detector = FaceDetector()
 
         self.cnn_input_size = 128
@@ -94,7 +98,7 @@ class MarkDetector:
             raw_boxes: the location of boxes.
         '''
 
-        for box in raw_boxes:
+        #for box in raw_boxes:
             # Move box down.
             # height: box[3] - box[1] width: box[2] - box[0]
             # diff_height_width = (box[3] - box[1]) - (box[2] - box[0])
@@ -102,12 +106,9 @@ class MarkDetector:
             # box_moved = util.move_box(box, [0, offset_y])
 
             # Move box square.
-            facebox = util.get_square_box(box)
+        #    facebox.append(box)
+        return raw_boxes
 
-            if util.box_in_image(facebox, image):
-                return facebox
-        return None
-    
     def detect_marks(self, image_np):
         '''detect marks from image'''
         # get result tensor by its name.
